@@ -1,24 +1,14 @@
-# --- Build stage ---
-FROM node:20-alpine AS build
-
+# Etap 1: Budowanie aplikacji Vue
+FROM node:lts-alpine as build-stage
 WORKDIR /app
-
-# Allow overriding the API URL baked into the static build via --build-arg.
-ARG VITE_API_URL=http://localhost:8000
-ENV VITE_API_URL=$VITE_API_URL
-
-COPY package.json package-lock.json* ./
+COPY package*.json ./
 RUN npm install
-
 COPY . .
 RUN npm run build
 
-# --- Serve stage ---
+# Etap 2: Serwowanie przez Nginx bez wymagań roota (dla OpenShift)
 FROM nginxinc/nginx-unprivileged:alpine
-
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build-stage /app/dist /usr/share/nginx/html
 
 EXPOSE 8080
-
 CMD ["nginx", "-g", "daemon off;"]
